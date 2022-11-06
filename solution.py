@@ -6,22 +6,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-def crp_sets(filename="CRPSets.xls"):
+def extract_sets(filename="CRPSets.xls"):
     df = pd.DataFrame(pd.read_excel(filename, names=[str(i) for i in range(65)], header=None))
-    #challenges = squish_rows(df.iloc[:, :-1].to_numpy()) # Compress and scale each challenge
     challenges = df.iloc[:, :-1].to_numpy()
     responses = df.iloc[:, -1].to_numpy()
     return challenges, responses
-
-def squish_rows(arr):
-    return_arr = []
-    for row in arr:
-        arr_bin_string = ''.join([str(i) for i in row])
-        return_arr.append(int(arr_bin_string,2))
-    print(return_arr)
-    np_arr = np.array(return_arr)
-    np_arr = np_arr.reshape(-1, 1)
-    return MinMaxScaler(feature_range=(0, 1)).fit_transform(X=np_arr, y=None)
 
 def split_data(x, y, train_sample_size=2000):
     train_size = train_sample_size / 12000
@@ -30,7 +19,7 @@ def split_data(x, y, train_sample_size=2000):
 
 def svm_test(x_train, x_test, y_train, y_test):
     from sklearn import svm
-    clf = svm.SVC(kernel='rbf')
+    clf = svm.SVC(kernel='linear')
     clf.fit(x_train, y_train)
     y_pred = clf.predict(x_test)
     print(y_pred)
@@ -50,25 +39,43 @@ def mlp_class(x_train, x_test, y_train, y_test):
     print(metrics.accuracy_score(y_test, y_pred))
     return 1
 
+def condition_challenges(challenges):
+    print(challenges.shape)
+    conditioned_challenges = np.empty((12000,1))
+    for index, challenge in enumerate(challenges):
+        weight = 0
+        for bit in challenge:
+            if bit == 1:
+                weight = weight + 1
+        conditioned_challenges[index] = weight
+    #from sklearn.preprocessing import StandardScaler
+    #scaler = StandardScaler()
+    #conditioned_challenges = scaler.fit_transform(conditioned_challenges)
+    return conditioned_challenges
+
+
+
+
 def main():
     # Import data
-    challenges, responses = crp_sets()
+    challenges, responses = extract_sets()
     # Display data
     print(challenges)
-
+    challenges = condition_challenges(challenges)
     # Plot possible correlations
-    #plt.plot(responses, challenges, 'o')
-    #plt.show()
 
+    plt.plot(challenges, responses, 'o')
+    plt.show()
+    quit()
     # Split the data into testing and training data
     # X represents the challenges where y represents the responses
-    x_train, x_test, y_train, y_test = split_data(challenges, responses, train_sample_size = 10000)
+    x_train, x_test, y_train, y_test = split_data(challenges, responses, train_sample_size = 11000)
     print(x_train)
     print(y_train)
 
     # Train the model
-    #svm_test(x_train, x_test, y_train, y_test)
-    mlp_class(x_train, x_test, y_train, y_test)
+    svm_test(x_train, x_test, y_train, y_test)
+    #mlp_class(x_train, x_test, y_train, y_test)
 
 
     # Evaluate the model
