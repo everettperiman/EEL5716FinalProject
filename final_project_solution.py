@@ -7,7 +7,7 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, accuracy_score, ConfusionMatrixDisplay
-
+import time
 
 # Additional sourcesd
 # https://archive.ics.uci.edu/ml/datasets/Physical+Unclonable+Functions
@@ -323,12 +323,14 @@ def detailed_model_scores(challenges, responses):
     # Record model performance over training data sizes
     scores_svc = []
     scores_lgr = []
+    times = []
 
     # Test the model accuracy over several different training data sizes
     high = int(len(challenges)*.95)
     low = int(len(challenges)*.008)
     step = 50
     training_samples = list(range(low, high, step))
+    time_start = time.time()
     for i in training_samples:
 
         # Split CRP data into training and test data
@@ -341,7 +343,28 @@ def detailed_model_scores(challenges, responses):
         print_matrix = True
         scores_svc.append(svc(x_train, x_test, y_train, y_test, training_yes_no))
         scores_lgr.append(lgr(x_train, x_test, y_train, y_test, training_yes_no))
+        times.append(time.time())
 
+    # Save performance results to a csv
+    # This will record the time to complete each round as well as the number of samples
+    with open('max_lgr_scores.csv','w') as csvfile:
+        for index in range(len(scores_lgr)):
+            score = scores_lgr[index]
+            samples = training_samples[index]
+            timestamp = times[index]
+            if index == 0:
+                time_to_train = timestamp - time_start
+            else:
+                time_to_train = timestamp - times[index-1]
+            csvfile.write("{},{},{},{}\n".format(score,samples, time_to_train, timestamp))
+
+    with open('max_svc_scores.csv','w') as csvfile:
+        for index in range(len(scores_lgr)):
+            score = scores_svc[index]
+            samples = training_samples[index]
+            timestamp = times[index]
+            time_to_train = timestamp - time_start
+            csvfile.write("{},{},{},{}\n".format(score,samples,time_to_train, timestamp))
 
     high_perf_index = []
     for index, i in enumerate(scores_svc):
