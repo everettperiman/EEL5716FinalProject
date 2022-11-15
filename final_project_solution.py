@@ -242,7 +242,7 @@ def evaluate_ml_models(challenges, responses):
     scores_lgr = []
 
     # Test the model accuracy over several different training data sizes
-    training_samples = [20, 200, 2000, 6000, 10000]
+    training_samples = [2000, 6000, 10000]
     for i in training_samples:
 
         # Split CRP data into training and test data
@@ -264,6 +264,7 @@ def evaluate_ml_models(challenges, responses):
     plt.xlabel("Number of training samples")
     plt.ylabel("Accuracy Score")
     plt.legend(loc='center')
+    plt.title("Training Scores @ 2000,6000,10000")
     plt.savefig('graphs\TrainingScores.png')
     plt.clf()
 
@@ -317,6 +318,51 @@ def find_eighty_percent(challenges, responses):
     plt.savefig('graphs\EightyPercentScores.png')
     plt.clf()
 
+# Machine Model Evaluations
+def detailed_model_scores(challenges, responses):
+    # Record model performance over training data sizes
+    scores_svc = []
+    scores_lgr = []
+
+    # Test the model accuracy over several different training data sizes
+    high = int(len(challenges)*.95)
+    low = int(len(challenges)*.008)
+    step = 50
+    training_samples = list(range(low, high, step))
+    for i in training_samples:
+
+        # Split CRP data into training and test data
+        x_train, x_test, y_train, y_test = split_data(challenges, responses, train_sample_size = i)
+        print(len(x_train))
+
+        # Train and measure the fit of each model
+        # Determine whether or not we want to find the best default values
+        training_yes_no = False
+        print_matrix = True
+        scores_svc.append(svc(x_train, x_test, y_train, y_test, training_yes_no))
+        scores_lgr.append(lgr(x_train, x_test, y_train, y_test, training_yes_no))
+
+
+    high_perf_index = []
+    for index, i in enumerate(scores_svc):
+        if i > .9:
+            high_perf_index.append(index)
+    for index, i in enumerate(scores_lgr):
+        if i > .9:
+            high_perf_index.append(index)
+   
+    if scores_svc:
+        plt.plot(training_samples[min(high_perf_index):], scores_svc[min(high_perf_index):], label="SVM")
+    if scores_lgr:
+        plt.plot(training_samples[min(high_perf_index):], scores_lgr[min(high_perf_index):], label="LGR")
+
+    plt.xlabel("Number of training samples")
+    plt.ylabel("Accuracy Score")
+    plt.title("Performance above 90% Accuracy")
+    plt.legend(loc='center')
+    plt.savefig('graphs\HighPerfTrainingScores.png')
+    plt.clf()
+
 
 
 def main():
@@ -327,6 +373,7 @@ def main():
     challenges, responses = extract_sets(transform=True)
     evaluate_ml_models(challenges, responses)
     find_eighty_percent(challenges, responses)
+    detailed_model_scores(challenges, responses)
 
 
 if __name__ == "__main__":
