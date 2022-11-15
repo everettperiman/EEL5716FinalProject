@@ -154,7 +154,7 @@ def split_data(x, y, train_sample_size=2000):
 
 # Machine Learning Models
 
-def svc(x_train, x_test, y_train, y_test, grid_search=False):
+def svc(x_train, x_test, y_train, y_test, grid_search=False, print_matrix=False):
     # Use the grid search technique if desired
     if grid_search:
         svc = SVC()
@@ -174,11 +174,12 @@ def svc(x_train, x_test, y_train, y_test, grid_search=False):
     y_pred = clf.predict(x_test)
 
     # Print model accuracy and confusion matrix
-    disp = ConfusionMatrixDisplay(confusion_matrix(y_test.ravel(), y_pred))
-    disp.plot()
-    plt.title("Confusion Matrix SVM @ {} Samples".format(len(x_train)))
-    plt.savefig('graphs\svm_{}.png'.format(len(x_train)))
-    plt.clf()
+    if print_matrix:
+        disp = ConfusionMatrixDisplay(confusion_matrix(y_test.ravel(), y_pred))
+        disp.plot()
+        plt.title("Confusion Matrix SVM @ {} Samples".format(len(x_train)))
+        plt.savefig('graphs\svm_{}.png'.format(len(x_train)))
+        plt.clf()
 
     # Print details about the grid search
     if grid_search and TESTING:
@@ -193,7 +194,7 @@ def svc(x_train, x_test, y_train, y_test, grid_search=False):
             print(svr_details)
     return accuracy_score(y_test.ravel(), y_pred)
 
-def lgr(x_train, x_test, y_train, y_test, grid_search=False):
+def lgr(x_train, x_test, y_train, y_test, grid_search=False, print_matrix=False):
     
     # Use the grid search technique if desired
     if grid_search:
@@ -213,11 +214,12 @@ def lgr(x_train, x_test, y_train, y_test, grid_search=False):
     y_pred = clf.predict(x_test)
 
     # Print model accuracy and confusion matrix
-    disp = ConfusionMatrixDisplay(confusion_matrix(y_test.ravel(), y_pred))
-    disp.plot()
-    plt.title("Confusion Matrix LGR @ {} Samples".format(len(x_train)))
-    plt.savefig('graphs\lgr_{}.png'.format(len(x_train)))
-    plt.clf()
+    if print_matrix:
+        disp = ConfusionMatrixDisplay(confusion_matrix(y_test.ravel(), y_pred))
+        disp.plot()
+        plt.title("Confusion Matrix LGR @ {} Samples".format(len(x_train)))
+        plt.savefig('graphs\lgr_{}.png'.format(len(x_train)))
+        plt.clf()
 
 
     # Print details about the grid search
@@ -250,8 +252,9 @@ def evaluate_ml_models(challenges, responses):
         # Train and measure the fit of each model
         # Determine whether or not we want to find the best default values
         training_yes_no = False
-        scores_svc.append(svc(x_train, x_test, y_train, y_test, training_yes_no))
-        scores_lgr.append(lgr(x_train, x_test, y_train, y_test, training_yes_no))
+        print_matrix = True
+        scores_svc.append(svc(x_train, x_test, y_train, y_test, training_yes_no, print_matrix))
+        scores_lgr.append(lgr(x_train, x_test, y_train, y_test, training_yes_no, print_matrix))
 
     if scores_svc:
         plt.plot(training_samples, scores_svc, label="SVM")
@@ -264,6 +267,58 @@ def evaluate_ml_models(challenges, responses):
     plt.savefig('graphs\TrainingScores.png')
     plt.clf()
 
+# Machine Model Evaluations
+def find_eighty_percent(challenges, responses):
+    # Record model performance over training data sizes
+    scores_svc = []
+    scores_lgr = []
+
+    # Test the model accuracy over several different training data sizes
+    # Start at 20% training data and decrease by .1%
+    high = int(len(challenges)*.1)
+    low = int(len(challenges)*.0001)
+    step = int(len(challenges) * .001)
+    training_samples = list(range(low, high, step))
+    training_samples.reverse()
+
+    for i in training_samples:
+
+        # Split CRP data into training and test data
+        x_train, x_test, y_train, y_test = split_data(challenges, responses, train_sample_size = i)
+        print(len(x_train))
+
+        # Train and measure the fit of each model
+        # Determine whether or not we want to find the best default values
+        training_yes_no = False
+        
+        if (len(scores_svc) == 0) or (min(scores_svc) > .80):
+            scores_svc.append(svc(x_train, x_test, y_train, y_test, training_yes_no))
+        if (len(scores_lgr) == 0) or min(scores_lgr) > .80:
+            scores_lgr.append(lgr(x_train, x_test, y_train, y_test, training_yes_no))
+    
+    if scores_svc:
+        plt.plot(training_samples[:len(scores_svc)], scores_svc, label="SVM")
+    if scores_lgr:
+        plt.plot(training_samples[:len(scores_svc)], scores_lgr, label="LGR")
+
+    scores = min([min(training_samples[:len(scores_svc)]), min(training_samples[:len(scores_svc)])])
+    plt.hlines(y=.8, 
+                xmin=scores, 
+                xmax=max(training_samples),
+                colors="red",
+                linestyles='dashed')
+    
+    plt.xlim=(0)
+    plt.xticks(list(range(0, max(training_samples), 100)), rotation = 45)
+    plt.xlabel("Number of training samples")
+    plt.ylabel("Accuracy Score")
+    plt.legend(loc='center')
+    plt.title("80% Accuracy Score")
+    plt.savefig('graphs\EightyPercentScores.png')
+    plt.clf()
+
+
+
 def main():
     # Import data
     demonstrate_model_consistency()
@@ -271,6 +326,7 @@ def main():
     # Evaluate the models
     challenges, responses = extract_sets(transform=True)
     evaluate_ml_models(challenges, responses)
+    find_eighty_percent(challenges, responses)
 
 
 if __name__ == "__main__":
